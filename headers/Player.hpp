@@ -37,6 +37,9 @@ public:
     virtual bool canBlockTax() const { return false; }
     virtual bool canBlockBribe() const { return false; }
     virtual bool canBlockCoup() const { return false; }
+
+    // Optional abilities for specific roles
+    virtual void invest(Game& game); // For Baron
 };
 
 #endif // PLAYER_HPP

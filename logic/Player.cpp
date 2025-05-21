@@ -71,6 +71,9 @@ void Player::arrest(Player& target, Game& game) {
 void Player::sanction(Player& target, Game& game) {
     removeCoins(3);
     game.applySanction(&target);
+    if (target.getRole() == "Baron") {
+        target.addCoins(1);
+    }
 }
 
 // Default implementation of coup (pay 7 coins to eliminate another player)
@@ -82,4 +85,8 @@ void Player::coup(Player& target, Game& game) {
         throw std::runtime_error("Cannot coup yourself.");
     }
     game.attemptCoup(this, target);
+}
+
+void Player::invest(Game&) {
+    // Implemented in the Baron class
 }

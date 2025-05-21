@@ -16,11 +16,13 @@ private:
 
 public:
     Game();
+    void run();
 
     void addPlayer(Player* player);
     Player& currentPlayer();
     void nextTurn();
 
+    const std::vector<Player*>& getPlayers() const;
     std::vector<std::string> activePlayers() const;
     std::string winner() const;
 
@@ -30,6 +32,14 @@ public:
     void setExtraTurn(Player* p);
     bool isPlayerSanctioned(Player* p) const;
     void applySanction(Player* p);
+
+    void initializePlayers();
+    void mainGameLoop();
+    void displayActions(const Player& player);
+    void handleAction(int choice, Player& player);
+    bool hasValidTargets(Player* current) const;
+    Player* selectTarget(Player* current);
+    Player* createRandomRole(const std::string& name); 
 
      // Action attempts with a possibility to be blocked
      void attemptBribe(Player* actor);

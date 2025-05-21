@@ -7,7 +7,6 @@ class Governor : public Player {
 public:
     Governor(const std::string& name);
     std::string getRole() const override;
-    void tax(Game& game) override;
     bool canBlockTax() const override;
 };
 
@@ -22,7 +21,7 @@ class Baron : public Player {
 public:
     Baron(const std::string& name);
     std::string getRole() const override;
-    void gather(Game& game) override;
+    void invest(Game& game) override;
 };
 
 class General : public Player {
