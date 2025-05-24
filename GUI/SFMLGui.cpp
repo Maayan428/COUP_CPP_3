@@ -346,7 +346,7 @@ void drawSelectPlayerCountScreen(sf::RenderWindow& window, sf::Font& font,
 
     sf::FloatRect bounds = playerCountText.getLocalBounds();
     playerCountText.setOrigin(bounds.width / 2.0f, bounds.height / 2.0f);
-    playerCountText.setPosition(centerX, 225); // יישרנו גם בגובה
+    playerCountText.setPosition(centerX, 225); 
     
     // Button Continue
     continueButton.setSize(sf::Vector2f(180, 50));
@@ -365,7 +365,7 @@ void drawSelectPlayerCountScreen(sf::RenderWindow& window, sf::Font& font,
     plusText.setFont(font);
     plusText.setString("+");
     plusText.setCharacterSize(32);
-    plusText.setFillColor(sf::Color(20, 60, 100)); // צבע כחול כהה שיבלוט
+    plusText.setFillColor(sf::Color(20, 60, 100)); 
     plusText.setStyle(sf::Text::Bold);
     plusText.setPosition(
     plusButton.getPosition().x + 13,
@@ -528,13 +528,13 @@ void drawInGameScreen(sf::RenderWindow& window, sf::Font& font, Game& game, sf::
         playerCircle.setPosition(x, y);
 
         if (!p->isActive()) {
-            playerCircle.setFillColor(sf::Color(180, 50, 50));  // הודח - אדום
+            playerCircle.setFillColor(sf::Color(180, 50, 50));  // Couped - red
         } else if (game.isPlayerSanctioned(p)) {
-            playerCircle.setFillColor(sf::Color(160, 160, 160));  // סנקציה - אפור
+            playerCircle.setFillColor(sf::Color(160, 160, 160));  // Sanctioned - gray
         } else if (&game.currentPlayer() == p) {
-            playerCircle.setFillColor(sf::Color(100, 200, 250));  // תורו - כחול בולט
+            playerCircle.setFillColor(sf::Color(50, 200, 50));  // Current - green
         } else {
-            playerCircle.setFillColor(sf::Color(120, 180, 255));  // רגיל - כחול בהיר
+            playerCircle.setFillColor(sf::Color(120, 180, 255));  // Player - blue
         }
 
         playerCircle.setOutlineThickness(2);
@@ -558,6 +558,7 @@ void drawInGameScreen(sf::RenderWindow& window, sf::Font& font, Game& game, sf::
     actionsText.setFillColor(sf::Color::Black);
     std::string text = "Available actions:\n1. Gather\n2. Tax\n3. Bribe\n4. Arrest\n5. Sanction\n6. Coup";
     if (game.currentPlayer().getRole() == "Baron") text += "\n7. Invest";
+    if (game.currentPlayer().getRole() == "Spy") text += "\n7. Peak";
     actionsText.setString(text);
     actionsText.setPosition(650, 100);
     window.draw(actionsText);

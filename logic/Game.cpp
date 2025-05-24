@@ -267,6 +267,9 @@ Player* Game::selectTarget(Player* current) {
 
 void Game::attemptBribe(Player* actor) {
     try {
+        if (actor->getCoins() < 4) {
+            throw std::runtime_error("Not enough coins to perform bribe (need 4).");
+        }
         actor->removeCoins(4);
         for (Player* p : players) {
             if (p->isActive() && p != actor && p->canBlockBribe()) {
