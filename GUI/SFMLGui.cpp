@@ -6,6 +6,7 @@
 #include <cmath>
 #include "GUIErrorManager.hpp"
 
+
 void launchGui() {
 
     Game game;
@@ -42,6 +43,7 @@ void launchGui() {
     std::vector<Player*> validTargets;
     int targetChoiceIndex = -1;
     bool showTargetPopup = false;
+    bool awaitingTarget = false;
    
     while (window.isOpen()) {
         sf::Event event;
@@ -49,35 +51,26 @@ void launchGui() {
             if (event.type == sf::Event::Closed)
                 window.close();
 
-            // Welcome page
             if (state == GameState::Welcome && event.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2f mousePos(event.mouseButton.x, event.mouseButton.y);
                 if (startButton.getGlobalBounds().contains(mousePos)) {
                     state = GameState::SelectPlayerCount;
-                    std::cout << "Start Game clicked → going to SelectPlayerCount\n";
                 }
             }
 
-            // Select num of players page
             if (state == GameState::SelectPlayerCount && event.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2f mouse(event.mouseButton.x, event.mouseButton.y);
-            
                 if (minusButton.getGlobalBounds().contains(mouse) && playerCount > 2)
                     playerCount--;
-            
                 if (plusButton.getGlobalBounds().contains(mouse) && playerCount < 6)
                     playerCount++;
-            
                 if (continueButton.getGlobalBounds().contains(mouse)) {
-                    std::cout << "Players selected: " << playerCount << "\n";
                     state = GameState::EnterNames;
                 }
             }
-    
-            // Choose names page
+
             if (state == GameState::EnterNames && event.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2f mouse(event.mouseButton.x, event.mouseButton.y);
-        
                 if (addPlayerButton.getGlobalBounds().contains(mouse)) {
                     if (currentNameInput.empty()) {
                         errorManager.showError("Name cannot be empty.");
@@ -89,42 +82,36 @@ void launchGui() {
                         playerNames.push_back(currentNameInput);
                         game.addPlayer(game.createRandomRole(currentNameInput));
                         currentNameInput.clear();
-                        errorManager.clear(); // clear any previous error
+                        errorManager.clear();
                     }
                 }
-        
-                if (startGameButton.getGlobalBounds().contains(mouse)){
+                if (startGameButton.getGlobalBounds().contains(mouse)) {
                     if (playerNames.size() != static_cast<size_t>(playerCount)) {
                         errorManager.showError("Please enter all player names before starting.");
                     } else {
                         state = GameState::ShowRoles;
-                        std::cout << "All players added. Starting game...\n";
                         errorManager.clear();
                     }
                 }
             }
-    
-            // Keyboard input - name
+
             if (state == GameState::EnterNames && event.type == sf::Event::TextEntered) {
                 if (event.text.unicode == '\b' && !currentNameInput.empty()) {
-                    currentNameInput.pop_back();  
+                    currentNameInput.pop_back();
                 } else if (event.text.unicode < 128 && event.text.unicode != '\r') {
                     currentNameInput += static_cast<char>(event.text.unicode);
                 }
             }
-        
-            // Displays all players and roles
+
             if (state == GameState::ShowRoles && event.type == sf::Event::MouseButtonPressed) {
                 sf::Vector2f mouse(event.mouseButton.x, event.mouseButton.y);
                 if (continueButton.getGlobalBounds().contains(mouse)) {
                     state = GameState::InGame;
-                    std::cout << "Game started!\n";
                 }
             }
 
-            // Main game board
-            if (state == GameState::InGame && event.type == sf::Event::KeyPressed) {
-                //int action = -1;   /////////inside switch - replade pending' with action
+            if (state == GameState::InGame && !awaitingTarget && event.type ==
+                    sf::Event::KeyPressed) {
                 switch (event.key.code) {
                     case sf::Keyboard::Num1: pendingAction = 1; break;
                     case sf::Keyboard::Num2: pendingAction = 2; break;
@@ -133,246 +120,130 @@ void launchGui() {
                     case sf::Keyboard::Num5: pendingAction = 5; break;
                     case sf::Keyboard::Num6: pendingAction = 6; break;
                     case sf::Keyboard::Num7: pendingAction = 7; break;
-                    default:
-                    errorManager.showError("Invalid key. Please choose a valid action.");
-                    break;
-                }
-            
-                if (pendingAction != -1 && !game.isGameOver()) {
-                    Player& player = game.currentPlayer();
-                    try {
-                        if (pendingAction == 1) {
-                            player.gather(game);
-                            lastActionTextStr = player.getName() + " performed Gather.";
-                            advanceToNextValidPlayer(game);
-                        } else if (pendingAction == 2) {
-                            if (guiAttemptTax(game, &player, window, font, errorManager)) {
-                                lastActionTextStr = "Tax was blocked.";
-                            } else {
-                                lastActionTextStr = player.getName() + " performed Tax.";
-                                advanceToNextValidPlayer(game);
-                            }
-                        } else if (pendingAction == 3) {
-                            if (guiAttemptBribe(game, &player, window, font, errorManager)) {
-                                lastActionTextStr = "Bribe was blocked.";
-                            } else {
-                                lastActionTextStr = player.getName() + " performed Bribe.";
-                                advanceToNextValidPlayer(game);
-                            }
-                        } else if (pendingAction == 4 || pendingAction == 5 || pendingAction == 6) {
-                            int cost = (pendingAction == 4 ? 3 : (pendingAction == 5 ? 2 : 7));
-                            if (player.getCoins() < cost) {
-                                errorManager.showError("Not enough coins for this action. You have $" + std::to_string(player.getCoins()) + ", need $" + std::to_string(cost) + ".");
-                                return;
-                            }
-                            validTargets.clear();
-                            for (Player* p : game.getPlayers()) {
-                                if (p->isActive() && p != &player) validTargets.push_back(p);
-                            }
-                            if (validTargets.empty()) {
-                                errorManager.showError("No valid targets for this action.");
-                                return;
-                            }
-                            showTargetPopup = true;
-                        }
-                    } catch (const std::exception& e) {
-                        errorManager.showError(e.what());
-                        lastActionTextStr = std::string("Error: ") + e.what();
-                    }
-//                    if (action == 2) { // tax
-//                        Player& actor = game.currentPlayer();
-//                        if (guiAttemptTax(game, &actor, window, font, errorManager)) {
-//                            lastActionTextStr = "Tax was blocked.";
-//                            continue;
-//                        } else {
-//                            lastActionTextStr = actor.getName() + " performed Tax.";
-//                            advanceToNextValidPlayer(game);
-//                            continue;
-//                        } 
-//                    }
-//
-//                    if (action == 3) { // bribe
-//                        Player& actor = game.currentPlayer();
-//                        if (guiAttemptBribe(game, &actor, window, font, errorManager)) {
-//                            lastActionTextStr = "Bribe was blocked.";
-//                            continue;
-//                        } else {
-//                            lastActionTextStr = actor.getName() + " performed Bribe.";
-//                            advanceToNextValidPlayer(game);
-//                            continue;
-//                        }
-//                    }
-//
-//                    if (action == 4 || action == 5 || action == 6) { // arrest|sanction|coup
-//                        int cost = (action == 4 ? 3 : (action == 5 ? 2 : 7));
-//                        if (player.getCoins() < cost) {
-//                            errorManager.showError("Not enough coins for this action. You have $" + std::to_string(player.getCoins()) + ", need $" + std::to_string(cost) + ".");
-//                            continue;
-//                        }
-//                        validTargets.clear();
-//                        for (Player* p : game.getPlayers()) {
-//                            if (p->isActive() && p != &player) validTargets.push_back(p);
-//                        }
-//                        if (validTargets.empty()) {
-//                            errorManager.showError("No valid targets for this action.");
-//                            continue;
-//                        }
-//                        pendingAction = action;
-//                        showTargetPopup = true;
-//                        continue;
-//                    }
-//                    
-//                    try {
-//                        game.handleAction(action, player);
-//                        lastActionTextStr = player.getName() + " performed action " + std::to_string(action);
-//                        advanceToNextValidPlayer(game);
-//                    } catch (const std::exception& e) {
-//
-//                        errorManager.showError(e.what());
-//                        lastActionTextStr = "Error: " + std::string(e.what());
-//                    }
-                }
-
-            }
-
-            if (showTargetPopup && event.type == sf::Event::KeyPressed) {
-                int index = -1;
-                switch (event.key.code) {
-                    case sf::Keyboard::Num1: index = 0; break;
-                    case sf::Keyboard::Num2: index = 1; break;
-                    case sf::Keyboard::Num3: index = 2; break;
-                    case sf::Keyboard::Num4: index = 3; break;
-                    case sf::Keyboard::Num5: index = 4; break;
-                    case sf::Keyboard::Num6: index = 5; break;
-                    default:
-                        errorManager.showError("Invalid key. Please choose a valid action.");
+                    default: 
+                        errorManager.showError("Invalid key. Please choose a valid action."); 
                         break;
                 }
 
+                Player& actor = game.currentPlayer();
+
+                if (pendingAction == 1) {
+                    game.currentPlayer().gather(game);
+                    lastActionTextStr = game.currentPlayer().getName() + " performed Gather.";
+                    advanceToNextValidPlayer(game);
+                    pendingAction = -1;
+
+                } else if (pendingAction == 2) {
+                    if (guiAttemptTax(game, &game.currentPlayer(), window, font, errorManager)) {
+                        lastActionTextStr = "Tax was blocked.";
+
+                    } else {
+                        lastActionTextStr = game.currentPlayer().getName() + " performed Tax.";
+                        advanceToNextValidPlayer(game);
+                    }
+                    pendingAction = -1;
+
+                } else if (pendingAction == 3) {
+                    if (guiAttemptBribe(game, &game.currentPlayer(), window, font, errorManager)) {
+                        lastActionTextStr = "Bribe was blocked.";
+                    } else {
+                        lastActionTextStr = game.currentPlayer().getName() + " performed Bribe.";
+                        advanceToNextValidPlayer(game);
+                    }
+                    pendingAction = -1;
+
+                } else if (pendingAction == 4 || pendingAction == 5 || pendingAction == 6) {
+                    int cost = (pendingAction == 4 ? 3 : (pendingAction == 5 ? 2 : 7));
+                    if (actor.getCoins() < cost) {
+                        errorManager.showError("Not enough coins. You have $" + std::to_string(actor.getCoins()) + ", need $" + std::to_string(cost));
+                        pendingAction = -1;
+                    } else {
+                        validTargets.clear();
+                        for (Player* p : game.getPlayers()) {
+                            if (p->isActive() && p != &actor) validTargets.push_back(p);
+                        }
+                        if (validTargets.empty()) {
+                            errorManager.showError("No valid targets for this action.");
+                            pendingAction = -1;
+                        } else {
+                            awaitingTarget = true;
+                        }
+                    }
+                }
+            }
+
+            if (showTargetPopup && event.type == sf::Event::KeyPressed) {
+                int index = event.key.code - sf::Keyboard::Num1;
                 if (index >= 0 && index < static_cast<int>(validTargets.size())) {
                     Player* target = validTargets[index];
                     Player& actor = game.currentPlayer();
+                    bool blocked = false;
 
-                    if (pendingAction == 2 && askBlockers(game, &actor, "Tax", game.getPlayers(), window, font, errorManager)) {
-                        showTargetPopup = false;
-                        pendingAction = -1;
-                        continue;  // Bribe was blocked
-                    }
-                    if (pendingAction == 3 && askBlockers(game, &actor, "Bribe", game.getPlayers(), window, font, errorManager)) {
-                        showTargetPopup = false;
-                        pendingAction = -1;
-                        continue;  // Bribe was blocked
-                    }
-                    if (pendingAction == 4 && askBlockers(game, &actor, "Arrest", game.getPlayers(), window, font, errorManager)) {
-                        showTargetPopup = false;
-                        pendingAction = -1;
-                        continue;  // Arrest was blocked
-                    }
-                    if (pendingAction == 6 && askBlockers(game, &actor, "Coup", game.getPlayers(), window, font, errorManager)) {
-                        showTargetPopup = false;
-                        pendingAction = -1;
-                        continue;  // Coup was blocked
-                    }
-
-                    try {   
+                    try {
                         switch (pendingAction) {
                             case 4:
                                 if (game.getLastArrested() == target) {
                                     errorManager.showError("You cannot arrest the same player twice in a row.");
-                                } else if (!askBlockers(game, &actor, "Arrest", game.getPlayers(), window, font, errorManager)) {
-                                    actor.arrest(*target, game);
+                                    break;      
+                                }
+                                blocked = guiAttemptArrest(game, &actor, target, window, font, errorManager);
+                                if (!blocked) {
                                     game.setLastArrested(target);
-                                    lastActionTextStr = actor.getName() + " performed Arrest on " + target->getName();
-                                    advanceToNextValidPlayer(game);
+                                    lastActionTextStr = actor.getName() + " arrested " + target->getName();
                                 } else {
                                     lastActionTextStr = "Arrest was blocked.";
                                 }
                                 break;
-
-                            // if (game.getLastArrested() == target) {
-                            //    errorManager.showError("You cannot arrest the same player twice in a row.");
-                            //    showTargetPopup = false;
-                            //    pendingAction = -1;
-                            //    break;
-                            // }
-                            //    actor.arrest(*target, game); break;
-                            //    game.setLastArrested(target);
-                                //showTargetPopup = false;
-                                //lastActionTextStr = actor.getName() + " performed Arrest on " + target->getName();
-                                //advanceToNextValidPlayer(game);
-                            //    break;
-                            case 5: 
-                                actor.sanction(*target, game);
-                                lastActionTextStr = actor.getName() + " sanctioned " + target->getName();
-                                advanceToNextValidPlayer(game);
+                                
+                            case 5:
+                                blocked = guiAttemptSanction(game, &actor, target, window, font, errorManager);
+                                if (!blocked)
+                                    lastActionTextStr = actor.getName() + " sanctioned " + target->getName();
+                                else
+                                    lastActionTextStr = "Sanction was blocked.";
                                 break;
-                                // actor.sanction(*target, game); 
-                                // break;
                             case 6:
-                                if (guiAttemptCoup(game, &actor, target, window, font, errorManager)) {
-                                    lastActionTextStr = "Coup was blocked.";
-                                } else {
-                                    actor.coup(*target, game);
+                                blocked = guiAttemptCoup(game, &actor, target, window, font, errorManager);
+                                if (!blocked)
                                     lastActionTextStr = actor.getName() + " performed Coup on " + target->getName();
-                                    advanceToNextValidPlayer(game);
-                                }
-                                break;                        
+                                else
+                                    lastActionTextStr = "Coup was blocked.";
+                                break;
                         }
-                        showTargetPopup = false;
-                        pendingAction = -1;
+                        advanceToNextValidPlayer(game);
+
                     } catch (const std::exception& e) {
                         errorManager.showError(e.what());
                         lastActionTextStr = std::string("Error: ") + e.what();
-                        showTargetPopup = false;
-                        pendingAction = -1;
                     }
+                    pendingAction = -1;
+                    awaitingTarget = false;
                 } else {
                     errorManager.showError("Invalid target number.");
                 }
-
-                continue;
+                showTargetPopup = false;
             }
-
-
         }
 
         window.clear(sf::Color::White);
 
-        if (state == GameState::Welcome) {
+        if (state == GameState::Welcome)
             drawWelcomeScreen(window, font, titleText, startButton, startText);
-            errorManager.draw(window);
+        else if (state == GameState::SelectPlayerCount)
+            drawSelectPlayerCountScreen(window, font, selectText, playerCountText, minusButton, plusButton, continueButton, continueText, minusText, plusText, playerCount);
+        else if (state == GameState::EnterNames)
+            drawEnterNamesScreen(window, font, enterNameTitle, nameInputText, addPlayerButton, addPlayerButtonText, startGameButton, startGameButtonText, addedPlayersListText, playerNames, currentNameInput, playerCount);
+        else if (state == GameState::ShowRoles)
+            drawShowRolesScreen(window, font, game.getPlayers(), continueButton, continueText);
+        else if (state == GameState::InGame) {
+            drawInGameScreen(window, font, game, lastActionText, lastActionTextStr);
+            if (awaitingTarget){
+                drawTargetPopup(window, font, validTargets);
+                showTargetPopup = true;
+            }
         }
 
-        else if (state == GameState::SelectPlayerCount) {
-            drawSelectPlayerCountScreen(window, font, selectText, playerCountText,
-                                        minusButton, plusButton, continueButton, continueText,
-                                        minusText, plusText,playerCount);
-            errorManager.draw(window);
-        }
-        
-        else if (state == GameState::EnterNames) {
-            drawEnterNamesScreen(window, font, enterNameTitle, nameInputText,
-                         addPlayerButton, addPlayerButtonText,
-                         startGameButton, startGameButtonText,
-                         addedPlayersListText,
-                         playerNames, currentNameInput, playerCount);
-            errorManager.draw(window);
-        }
-        
-        
-        if (state == GameState::ShowRoles) {
-            drawShowRolesScreen(window, font, game.getPlayers(), continueButton, continueText);
-            errorManager.draw(window);
-        }
-        
-        if (state == GameState::InGame) {
-            drawInGameScreen(window, font, game, lastActionText, lastActionTextStr);
-            if (showTargetPopup) {
-                drawTargetPopup(window, font, validTargets);
-            }
-            errorManager.draw(window);
-        }  
-    
+        errorManager.draw(window);
         window.display();
     }
 }
@@ -402,8 +273,8 @@ void drawWelcomeScreen(sf::RenderWindow& window, sf::Font& font, sf::Text& title
     startText.setFillColor(sf::Color::White);
     startText.setStyle(sf::Text::Bold);
     startText.setPosition(
-        startButton.getPosition().x + 35,
-        startButton.getPosition().y + 18
+    startButton.getPosition().x + 35,
+    startButton.getPosition().y + 18
     );
 
     window.draw(titleText);
@@ -679,78 +550,6 @@ void drawInGameScreen(sf::RenderWindow& window, sf::Font& font, Game& game, sf::
     window.draw(lastActionText);
 }
 
-void handleGuiActionInput(Game& game, sf::Text& lastActionText, sf::Keyboard::Key key) {
-    
-    sf::Font font;
-    if (!font.loadFromFile("GUI/arial.ttf")) {
-        std::cerr << "Error loading font!" << std::endl;
-        return;
-    }
-    GUIErrorManager errorManager;
-    errorManager.init(font);
-    
-    Player& current = game.currentPlayer();
-    int action = -1;
-
-    switch (key) {
-        case sf::Keyboard::Num1: action = 1; break;
-        case sf::Keyboard::Num2: action = 2; break;
-        case sf::Keyboard::Num3: action = 3; break;
-        case sf::Keyboard::Num4: action = 4; break;
-        case sf::Keyboard::Num5: action = 5; break;
-        case sf::Keyboard::Num6: action = 6; break;
-        case sf::Keyboard::Num7: action = 7; break;
-        default:
-            errorManager.showError("Invalid key. Please choose a valid action.");
-            break;
-    }
-
-    try {
-        switch (action) {
-            case 1:
-                current.gather(game);
-                lastActionText.setString("Last action: Gather");
-                break;
-            case 2:
-                game.attemptTax(&current);
-                lastActionText.setString("Last action: Tax");
-                break;
-            case 3:
-                game.attemptBribe(&current);
-                lastActionText.setString("Last action: Bribe");
-                break;
-            case 4:
-                current.arrest(*game.selectTarget(&current), game);
-                lastActionText.setString("Last action: Arrest");
-                break;
-            case 5:
-                current.sanction(*game.selectTarget(&current), game);
-                lastActionText.setString("Last action: Sanction");
-                break;
-            case 6:
-                current.coup(*game.selectTarget(&current), game);
-                lastActionText.setString("Last action: Coup");
-                break;
-            case 7:
-                if (current.getRole() == "Baron") {
-                    current.invest(game);
-                    lastActionText.setString("Last action: Invest");
-                } else {
-                    lastActionText.setString("Invalid: Only Baron can invest.");
-                    return;  // Don't advance turn
-                }
-                break;
-            default:
-                lastActionText.setString("Invalid action number");
-                return;  // Don't advance turn
-        }
-        advanceToNextValidPlayer(game);
-    } catch (const std::exception& e) {
-        lastActionText.setString(std::string("Action failed: ") + e.what());
-    }
-}
-
-
 void drawTargetPopup(sf::RenderWindow& window, sf::Font& font, const std::vector<Player*>& targets) {
     sf::RectangleShape box(sf::Vector2f(400, 300));
     box.setFillColor(sf::Color(255, 255, 255, 245));
@@ -882,8 +681,10 @@ bool askBlockers(Game& game,
     
             if (waitForBlockResponse(window, errorManager)) {
                 try {
-                    p->removeCoins(5);
-                    errorManager.showError("Coup was blocked by " + p->getName() + " (General)");
+                    if(p->getRole() == "General"){
+                        p->removeCoins(5);
+                    }
+                    errorManager.showError("Coup was blocked by " + p->getName() + " ("+ p->getRole() +")");
                     showError = true;
                     errorClock.restart();
                     return true;
@@ -967,54 +768,36 @@ bool askBlockers(Game& game,
 
 bool guiAttemptTax(Game& game, Player* actor, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager) {
     const auto& players = game.getPlayers();
-    for (Player* p : players) {
-        if (p->isActive() && p != actor && p->getRole() == "Governor") {
-            std::string message = p->getName() + ", do you want to block the tax of " + actor->getName() + "? (Y/N)";
-            drawBlockPrompt(window, font, message);
-
-            if (waitForBlockResponse(window, errorManager)) {
-                errorManager.showError("Tax was blocked by " + p->getName() + " (Governor)");
-                return true;
-            }
-        }
+    if (askBlockers(game, actor, "Tax", players, window, font, errorManager)) {
+        return true; // blocked
     }
-        
-    // no one blocked, pay 2 / 3
+
     try {
         if (actor->getRole() == "Governor") {
             actor->addCoins(3);
         } else {
             actor->addCoins(2);
         }
-        return false; // לא נחסם
+        return false;
     } catch (const std::exception& e) {
         errorManager.showError("Tax failed: " + std::string(e.what()));
-        return true; // משהו השתבש – מתייחסים כאילו נחסם
+        return true;
     }
 }
 
 bool guiAttemptBribe(Game& game, Player* actor, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager) {
     if (actor->getCoins() < 4) {
         errorManager.showError("Not enough coins to perform bribe (need 4).");
-        return true;  // treated as blocked/failed
+        return true;
     }
 
     actor->removeCoins(4);
-
     const auto& players = game.getPlayers();
-    for (Player* p : players) {
-        if (p->isActive() && p != actor && p->getRole() == "Judge") {
-            std::string message = p->getName() + ", do you want to block the bribe of " + actor->getName() + "? (Y/N)";
-            drawBlockPrompt(window, font, message);
 
-            if (waitForBlockResponse(window, errorManager)) {
-                errorManager.showError("Bribe was blocked by " + p->getName() + " (Judge)");
-                return true;
-            }
-        }
+    if (askBlockers(game, actor, "Bribe", players, window, font, errorManager)) {
+        return true;
     }
 
-    // No one blocked → actor gets extra turn
     game.setExtraTurn(actor);
     return false;
 }
@@ -1026,25 +809,46 @@ bool guiAttemptCoup(Game& game, Player* actor, Player* target, sf::RenderWindow&
     }
 
     const auto& players = game.getPlayers();
-    for (Player* p : players) {
-        if (p->isActive() && p != actor && p->getRole() == "General") {
-            if (p->getCoins() < 5) {
-                continue;  // Cannot block if no money
-            }
 
-            std::string message = p->getName() + ", do you want to block the coup of " + actor->getName() + " against " + target->getName() + "? (Y/N)";
-            drawBlockPrompt(window, font, message);
-
-            if (waitForBlockResponse(window, errorManager)) {
-                p->removeCoins(5);
-                actor->removeCoins(7);  // still pays
-                errorManager.showError("Coup was blocked by " + p->getName() + " (General)");
-                return true;
-            }
-        }
+    if (askBlockers(game, actor, "Coup", players, window, font, errorManager)) {
+        actor->removeCoins(7); 
+        return true;
     }
 
     actor->removeCoins(7);
     target->eliminate();
     return false;
+}
+
+bool guiAttemptArrest(Game& game, Player* actor, Player* target, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager) {
+    if (askBlockers(game, actor, "Arrest", game.getPlayers(), window, font, errorManager)) {
+        return true; 
+    }
+
+    try {
+        actor->arrest(*target, game);
+        return false;
+    } catch (const std::exception& e) {
+        errorManager.showError("Arrest failed: " + std::string(e.what()));
+        return true;
+    }
+}
+
+bool guiAttemptSanction(Game& game, Player* actor, Player* target, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager) {
+    if (actor->getCoins() < 3) {
+        errorManager.showError("Not enough coins to perform sanction (need 3).");
+        return true;
+    }
+
+    if (askBlockers(game, actor, "Sanction", game.getPlayers(), window, font, errorManager)) {
+        return true; // Action blocked
+    }
+
+    try {
+        actor->sanction(*target, game);
+        return false;
+    } catch (const std::exception& e) {
+        errorManager.showError("Sanction failed: " + std::string(e.what()));
+        return true;
+    }
 }

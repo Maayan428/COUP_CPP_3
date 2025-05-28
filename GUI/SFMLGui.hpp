@@ -67,8 +67,11 @@ bool askBlockers(Game& game,
     sf::RenderWindow& window,
     sf::Font& font,
     GUIErrorManager& errorManager);
-    bool guiAttemptTax(Game& game, Player* actor, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager);
-    bool guiAttemptBribe(Game& game, Player* actor, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager);
-    bool guiAttemptCoup(Game& game, Player* actor, Player* target, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager);
+
+bool guiAttemptTax(Game& game, Player* actor, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager);
+bool guiAttemptBribe(Game& game, Player* actor, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager);
+bool guiAttemptCoup(Game& game, Player* actor, Player* target, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager);
+bool guiAttemptArrest(Game& game, Player* actor, Player* target, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager);
+bool guiAttemptSanction(Game& game, Player* actor, Player* target, sf::RenderWindow& window, sf::Font& font, GUIErrorManager& errorManager);
 
 #endif // SFML_GUI_HPP
