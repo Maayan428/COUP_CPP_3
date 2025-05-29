@@ -1,3 +1,5 @@
+//maayan428@gmail.com
+
 #ifndef GAME_HPP
 #define GAME_HPP
 
@@ -17,6 +19,7 @@ private:
 
 public:
     Game();
+    ~Game();
     void run();
 
     void addPlayer(Player* player);

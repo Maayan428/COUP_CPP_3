@@ -1,3 +1,5 @@
+//maayan428@gmail.com
+
 #include "Player.hpp"
 #include "Game.hpp" //Interact with the Game object
 

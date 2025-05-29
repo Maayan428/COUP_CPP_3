@@ -1,3 +1,5 @@
+//maayan428@gmail.com
+
 // GUIErrorManager.hpp
 #pragma once
 

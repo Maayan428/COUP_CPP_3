@@ -1,9 +1,17 @@
+//maayan428@gmail.com
+
 #include "Game.hpp"
 #include "Player.hpp"
 #include <stdexcept>
 #include <iostream>
 #include <random>
 #include "Role.hpp"
+
+Game::~Game() {
+    for (Player* p : players) {
+        delete p;
+    }
+}
 
 Game::Game() :
     currentTurnIndex(0), extraTurnPlayer(nullptr) {}

@@ -1,3 +1,5 @@
+//maayan428@gmail.com
+
 #include <SFML/Graphics.hpp>
 #include "SFMLGui.hpp"
 #include <iostream>

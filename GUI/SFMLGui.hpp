@@ -1,3 +1,5 @@
+//maayan428@gmail.com
+
 #ifndef SFML_GUI_HPP
 #define SFML_GUI_HPP
 
